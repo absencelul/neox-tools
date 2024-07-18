@@ -1,61 +1,49 @@
-# Neox Model Converter & EXPK/NXPK Extractor
+# NeoX NPK Extractor
 
-![snapshot](https://github.com/zhouhang95/neox_tools/raw/master/image/20240330031553.png)
+![Screenshot](https://github.com/user-attachments/assets/0d742699-4269-497c-95bf-ab2c1c3b1460)
 
-python version is 3!
-
-Step 0
+# Setup
 ```
 pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr
+pip install zstandard lz4 zipfile
 ```
-If you are in China, please use ...
+### If you are in China:
 ```
 pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-Step 1
-```
-python extractor.py expk_file_path
-```
-example:
-```
-python extractor.py hero1.npk
-```
-if you'll unpack Onmyoji game.
-you should use onmyoji_extractor.py rather than extractor.py
-
-```
-python onmyoji_extractor.py res.npk
+pip install zstandard lz4 zipfile
 ```
 
-Step 2
+# Instructions to extract
+## Basic examples
+Defining a file:
 ```
-python converter.py mesh_file_path
+python extractor.py -p nxpk_file_path
 ```
-example:
+Defining a folder:
 ```
-python converter.py hero1/00390823.mesh
+python extractor.py -p folder_path
 ```
-if you want obj format:
+Basic use (will iterate through all available NPK files)
 ```
-python converter.py mesh_file_path --mode obj
-```
-if you want iqe format:
-```
-python converter.py mesh_file_path --mode iqe
+python extractor.py
 ```
 
-You can check this page for update:
-https://github.com/zhouhang95/neox_tools
-
-Step 3
+## Extra options
+Delete .zst and .zip files after having extracted them
 ```
-python main.py
+python extractor.py -d
 ```
-File -> Load Unpack Folder
+Do not write the NXFX file (if applicable) which appears at the bottom of the new NPK files
+```
+python extractor.py --no-nxfx
+```
+
+~~if you'll unpack Onmyoji game.~~
+~~you should use onmyoji_extractor.py rather than extractor.py~~
+
+I am trying to add compability to every type of NPK file, always try to use extractor.py and open issue in GitHub if something fails
 
 
-then select the generated folder after unpacking
-
-if you search more neox game unpack, may be this work:
-https://blog.sina.com.cn/s/blog_b4721dbb0102yqoj.html
-
+# Disclaimer:
+I am not the creator (please check the original fork), I will only be offering support to the extractor.py and keys.py script, I can fix issues with the mesh viewer / converter if possible but refer those issues to zhouhang95.
+Thank you to the original creator of this script: zhouhang95, I would not know how NPK's work without it.

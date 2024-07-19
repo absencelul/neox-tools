@@ -4,13 +4,11 @@
 
 # Setup
 ```
-pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr
-pip install zstandard lz4 zipfile
+pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr zstandard lz4
 ```
 ### If you are in China:
 ```
-pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr -i https://pypi.tuna.tsinghua.edu.cn/simple
-pip install zstandard lz4 zipfile
+pip install numpy transformations pymeshio tqdm pyqt5 zstandard lz4 moderngl pyrr -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 # Instructions to extract

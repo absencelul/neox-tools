@@ -23,10 +23,6 @@ class newrotor(object):
         for c in buf:
             if do_decrypt:
                 for i in range(nr-1,-1,-1):
-                    print(c)
-                    print(rotors[i])
-                    print(pos[i])
-                    print("{}::{}".format(i, c))
                     c = pos[i] ^ rotors[i][c]
             else:
                 for i in range(nr):

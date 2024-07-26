@@ -125,7 +125,8 @@ def init_rotor():
 
 def _reverse_string(s):
     l = list(s)
-    l = (list(map(lambda x: x ^ 154, l[0:128])) + l[128:]).reverse()
+    l = list(map(lambda x: x ^ 154, l[0:128])) + l[128:]
+    l.reverse()
     return bytes(l)
 
 def unpack(args, statusBar=None):

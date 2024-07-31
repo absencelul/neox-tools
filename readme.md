@@ -44,4 +44,12 @@ I am trying to add compability to every type of NPK file, always try to use extr
 
 # Disclaimer:
 I am not the creator (please check the original fork), I will only be offering support to the extractor.py and keys.py script, I can fix issues with the mesh viewer / converter if possible but refer those issues to zhouhang95.
-Thank you to the original creator of this script: zhouhang95, I would not know how NPK's work without it.
+
+# Credits
+
+Thank you to:
+zhouhang95 (https://github.com/zhouhang95/neox_tools) - Original script
+hax0r313373 (https://github.com/hax0r31337/denpk2) - Code for new RSA encryption
+xforce (https://github.com/xforce/neox-tools) - Research on NPK files and how they work
+yuanbi (https://github.com/yuanbi/NeteaseUnpackTools) - Rotor encryption and marshalling for PYC
+

@@ -3,7 +3,6 @@ import os, struct, zlib, tempfile, argparse, zstandard, lz4.block, zipfile
 from key import Keys
 import rotor
 
-
 def readuint32(f):
     return struct.unpack('I', f.read(4))[0]
 def readuint16(f):
@@ -79,6 +78,8 @@ def get_ext(data):
         return 'mdmp'
     elif data[:4] == b'RGIS':
         return 'gis'
+    elif data[7:15] == bytes([0x4E, 0x58, 0x53, 0x33, 0x03, 0x00, 0x00, 0x01]):
+        return 'nxs3'
     elif data[:4] == b'NTRK':
         return 'ntrk'
     elif data[:4] == b'RIFF':
@@ -89,6 +90,8 @@ def get_ext(data):
         return 'pem'
     elif data[:1] == b'<':
         return 'xml'
+    elif data[:4] == bytes([0xE3, 0x00, 0x00, 0x00]):
+        return 'pyc'
     elif len(data) < 1000000:
         if b'package google.protobuf' in data:
             return 'proto'
@@ -231,9 +234,8 @@ def unpack(args, statusBar=None):
 
                 if pkg_type:
                     data = keys.decrypt(data)
-
+                
                 ext = get_ext(data)
-
                 if file_flag == 3:
                     b = crc ^ file_original_length
 
@@ -250,16 +252,26 @@ def unpack(args, statusBar=None):
 
                 if zflag == 1 and ext != 'rot':
                     data = zlib.decompress(data)
+                elif zflag == 2 and ext != 'rot':
+                    data = lz4.block.decompress(data, uncompressed_size=2147483647)
 
                 if ext == "rot":
                     rotor = init_rotor()
                     data = rotor.decrypt(data)
                     data = zlib.decompress(data)
                     data = _reverse_string(data)
-                    ext = "pyc"
+                    ext = get_ext(data)
 
-                if zflag == 2:
-                    data = lz4.block.decompress(data, uncompressed_size=2147483647)
+                if ext == "nxs3":
+                    with open("file.tmp", "wb") as wr:
+                        wr.write(data)
+                    import subprocess
+                    os.system('./de_nxs3')
+                    with open("done.tmp", "rb") as rd:
+                        data = rd.read()
+                    os.remove("file.tmp")
+                    os.remove("done.tmp")
+                    ext = get_ext(data)
 
                 if file_structure:
                     print_data(args.info, "FILENAME:", file_structure, "FILE", file_offset)
@@ -275,14 +287,15 @@ def unpack(args, statusBar=None):
                     dctx.decompress(data)
                     with open(file_path, 'wb') as dat:
                         dat.write(data)
-                else:
-                    with open(file_path, 'wb') as dat:
-                        dat.write(data)                    
+                
                 if ext == 'zip':
                     with zipfile.ZipFile(file_path, 'r') as zip:
                         zip.extractall(file_path.replace(".zip", ""))
                     if args.delete_compressed:
                         os.remove(file_path)
+                else:
+                    with open(file_path, 'wb') as dat:
+                        dat.write(data)  
             print("FINISHED!")
 
 def get_parser():

@@ -56,6 +56,10 @@ def get_ext(data):
         return 'pvr'
     elif data[:3] == b'DDS':
         return 'dds'
+    elif data[-18:-2] == b'TRUEVISION-XFILE' or data[:3] == bytes([0x00, 0x00, 0x02]) or data[:3] == bytes([0x0D, 0x00, 0x02]):
+        return 'tga'
+    elif data [:2] == b'BM':
+        return 'bmp'
     elif data[:18] == b'from typing import ':
         return '.pyi'
     elif data[1:4] == b'KTX':
@@ -137,7 +141,7 @@ def unpack(args, statusBar=None):
     if args.info == None:
         args.info = 0
     if args.path == None or os.path.isdir(args.path):
-        allfiles = [x for x in os.listdir() if x.endswith(".npk")]
+        allfiles = [x for x in os.listdir(args.path) if x.endswith(".npk")]
     else:
         allfiles.append(args.path)
     keys = Keys()
@@ -216,6 +220,8 @@ def unpack(args, statusBar=None):
                         file_flag,
                         ))
             step = int(files / 50)
+            if step == 0:
+                step = 1
             
             for i, item in enumerate(index_table):
                 if (i % step == 0 or i + 1 == files and args.info < 2) or args.info > 2:
@@ -235,7 +241,6 @@ def unpack(args, statusBar=None):
                 if pkg_type:
                     data = keys.decrypt(data)
                 
-                ext = get_ext(data)
                 if file_flag == 3:
                     b = crc ^ file_original_length
 
@@ -250,10 +255,29 @@ def unpack(args, statusBar=None):
                     for j in range(size):
                         data[start + j] = data[start + j] ^ key[j % len(key)]
 
-                if zflag == 1 and ext != 'rot':
-                    data = zlib.decompress(data)
-                elif zflag == 2 and ext != 'rot':
-                    data = lz4.block.decompress(data, uncompressed_size=2147483647)
+                if file_flag == 4:
+                    v3 = int(file_original_length)
+                    v4 = int(crc)
+    
+                    offset = 0
+                    length = 0                    
+
+                    if file_length < 0x81:
+                        length = file_length
+                    else:
+                        offset = (v3 >> 1) % (file_length - 0x80)
+                        length = (((v4 << 1) & 0xffffffff) % 0x60 + 0x20)
+
+                    key = (v3 ^ v4) & 0xff
+                    data = bytearray(data)
+
+                    for xx in range(offset, min(offset + length, file_original_length)):
+                        data[xx] ^= key
+                        key = (key + 1) & 0xff
+                    data = bytes(data)
+                    
+
+                ext = get_ext(data)
 
                 if ext == "rot":
                     rotor = init_rotor()
@@ -273,6 +297,15 @@ def unpack(args, statusBar=None):
                     os.remove("done.tmp")
                     ext = get_ext(data)
 
+                if zflag == 1 and ext != 'rot':
+                    with open("file.tmp", "wb") as wr:
+                        wr.write(data)
+                    data = zlib.decompress(data)
+                elif zflag == 2 and ext != 'rot':
+                    data = lz4.block.decompress(data, uncompressed_size=2147483647)
+
+                ext = get_ext(data)
+
                 if file_structure:
                     print_data(args.info, "FILENAME:", file_structure, "FILE", file_offset)
                     file_path = folder_path + "/" + file_structure.decode().replace("\\", "/")
@@ -287,8 +320,9 @@ def unpack(args, statusBar=None):
                     dctx.decompress(data)
                     with open(file_path, 'wb') as dat:
                         dat.write(data)
-                
-                if ext == 'zip':
+                elif ext == 'zip':
+                    with open(file_path, 'wb') as dat:
+                        dat.write(data) 
                     with zipfile.ZipFile(file_path, 'r') as zip:
                         zip.extractall(file_path.replace(".zip", ""))
                     if args.delete_compressed:

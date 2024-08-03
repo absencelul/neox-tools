@@ -141,14 +141,14 @@ def unpack(args, statusBar=None):
     if args.info == None:
         args.info = 0
     if args.path == None or os.path.isdir(args.path):
-        allfiles = [x for x in os.listdir(args.path) if x.endswith(".npk")]
+        allfiles = [args.path + "/" +x for x in os.listdir(args.path) if x.endswith(".npk")]
     else:
         allfiles.append(args.path)
     keys = Keys()
 
     for path in allfiles:
         print("UNPACKING: {}".format(path))
-        folder_path = path.replace('.npk', '')
+        folder_path = path[:-4]
         if not os.path.exists(folder_path):
             os.mkdir(folder_path)
         with open(path, 'rb') as f:
@@ -219,9 +219,7 @@ def unpack(args, statusBar=None):
                         zip_flag,
                         file_flag,
                         ))
-            step = int(files / 50)
-            if step == 0:
-                step = 1
+            step = files // 50 + 1
             
             for i, item in enumerate(index_table):
                 if (i % step == 0 or i + 1 == files and args.info < 2) or args.info > 2:
@@ -286,14 +284,14 @@ def unpack(args, statusBar=None):
                     data = _reverse_string(data)
 
                 if ext == "nxs3":
-                    with open("tmp1", "wb") as wr:
+                    with open("file.tmp") as wr:
                         wr.write(data)
                     import subprocess
-                    os.system('./de_nxs3')
-                    with open("done", "rb") as rd:
+                    os.system('./de_nxs3 file.tmp done.tmp')
+                    with open("done.tmp", "rb") as rd:
                         data = rd.read()
-                    os.remove("tmp1")
-                    os.remove("done")
+                    os.remove("file.tmp")
+                    os.remove("done.tmp")
 
                 if zflag == 1 and ext != 'rot':
                     with open("file.tmp", "wb") as wr:

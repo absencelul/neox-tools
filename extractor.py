@@ -94,7 +94,7 @@ def get_ext(data):
         return 'pem'
     elif data[:1] == b'<':
         return 'xml'
-    elif data[:4] == bytes([0xE3, 0x00, 0x00, 0x00]):
+    elif data[:4] == bytes([0xE3, 0x00, 0x00, 0x00]) or data[:4] == bytes([0x63, 0x00, 0x00, 0x00]):
         return 'pyc'
     elif len(data) < 1000000:
         if b'package google.protobuf' in data:
@@ -284,18 +284,16 @@ def unpack(args, statusBar=None):
                     data = rotor.decrypt(data)
                     data = zlib.decompress(data)
                     data = _reverse_string(data)
-                    ext = get_ext(data)
 
                 if ext == "nxs3":
-                    with open("file.tmp", "wb") as wr:
+                    with open("tmp1", "wb") as wr:
                         wr.write(data)
                     import subprocess
                     os.system('./de_nxs3')
-                    with open("done.tmp", "rb") as rd:
+                    with open("done", "rb") as rd:
                         data = rd.read()
-                    os.remove("file.tmp")
-                    os.remove("done.tmp")
-                    ext = get_ext(data)
+                    os.remove("tmp1")
+                    os.remove("done")
 
                 if zflag == 1 and ext != 'rot':
                     with open("file.tmp", "wb") as wr:
@@ -314,7 +312,7 @@ def unpack(args, statusBar=None):
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 if ext == 'zst':
                     if not args.delete_compressed:
-                        with open(file_path+".zst", 'wb') as dat:
+                        with open(file_path + ".zst", 'wb') as dat:
                             dat.write(data)
                     dctx = zstandard.ZstdDecompressor()
                     dctx.decompress(data)

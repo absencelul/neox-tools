@@ -13,27 +13,45 @@ pip install numpy transformations pymeshio tqdm pyqt5 zstandard lz4 moderngl pyr
 
 # Instructions to extract
 ## Basic examples
-Defining a file:
-```
-python extractor.py -p nxpk_file_path
-```
-Defining a folder:
-```
-python extractor.py -p folder_path
-```
-Basic use (will iterate through all available NPK files)
-```
-python extractor.py
+
+No arguments will go through all the files and folders and find all NPK files
+```txt
+> python extractor.py
 ```
 
-## Extra options
-Delete .zst and .zip files after having extracted them
+With the '-h' argument, you can see at the help options
+```txt
+> python extractor.py -h
 ```
-python extractor.py -d
+
+With the '-p' argument, you can specify a file or a folder which to analyse
+```txt
+> python extractor.py -p script.npk
 ```
-Do not write the NXFX file (if applicable) which appears at the bottom of the new NPK files
+
+With the '-d' argument, if there are any ZIP or ZStandard files in the NPK, these will get deleted after extraction
+```txt
+> python extractor.py -p script.npk -d
 ```
-python extractor.py --no-nxfx
+
+With the '-i' argument, you can see data on the NPK file being extracted (from 1 to 5 for verbosity)
+```txt
+> python extractor.py -p res.npk -i (1 to 5)
+```
+
+With the '--nxfn-file' argument, there will be a "NXFN_result.txt" file that has the NXFN file structuring from inside the NPK (if applicable)
+```txt
+> python extractor.py -p res2.npk --nxfn-file
+```
+
+With the '--no-nxfn' argument, you can disable the NXFN file structuring (useful if it's failing, you should not be using this unless there is a bug that stops you from extracting, which should be reported)
+```txt
+> python extractor.py -p res4.npk --no-nxfn
+``` 
+
+With the '--do-one' argument, the program will only do one file from inside the NPK (useful for testing purposes)
+```txt
+> python extractor.py -p script.npk --do-one
 ```
 
 ~~if you'll unpack Onmyoji game.~~

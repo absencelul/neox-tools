@@ -3,19 +3,14 @@ import os, struct, zlib, tempfile, argparse, zstandard, lz4.block, zipfile
 from key import Keys
 import rotor
 
+def readuint64(f):
+    return struct.unpack('Q', f.read(8))[0]
 def readuint32(f):
     return struct.unpack('I', f.read(4))[0]
 def readuint16(f):
     return struct.unpack('H', f.read(2))[0]
 def readuint8(f):
     return struct.unpack('B', f.read(1))[0]
-def init_rotor():
-    asdf_dn = 'j2h56ogodh3se'
-    asdf_dt = '=dziaq.'
-    asdf_df = '|os=5v7!"-234'
-    asdf_tm = asdf_dn * 4 + (asdf_dt + asdf_dn + asdf_df) * 5 + '!' + '#' + asdf_dt * 7 + asdf_df * 2 + '*' + '&' + "'"
-    rot = rotor.newrotor(asdf_tm)
-    return rot
 
 def print_data(verblevel, text, data, typeofdata, pointer=0):
     match verblevel:
@@ -61,12 +56,12 @@ def get_ext(data):
     elif data [:2] == b'BM':
         return 'bmp'
     elif data[:18] == b'from typing import ':
-        return '.pyi'
+        return 'pyi'
     elif data[1:4] == b'KTX':
         return 'ktx'
     elif data[1:4] == b'PNG':
         return 'png'
-    elif data[:2] == bytes([0x28, 0xB5]) or data[:2] == bytes([0x1D, 0x04]):
+    elif data[:2] == bytes([0x28, 0xB5]) or data[:2] == bytes([0x1D, 0x04]) or data[:2] == bytes([0x15, 0x23]):
         return 'rot'
     elif data[:4] == bytes([0x34, 0x80, 0xC8, 0xBB]):
         return 'mesh'
@@ -113,12 +108,10 @@ def get_ext(data):
             return 'html'
         if b'Javascript' in data:
             return 'js'
-        if b'bip001' in data or b'bone_' in data or b'bone001' in data:
-            return 'bip001'
+        if b'biped' in data or b'bip001' in data or b'bone' in data or b'bone001' in data or b'bip01' in data:
+            return 'model'
         if b'div.document' in data:
             return 'css'
-        if b'ssh' in data or b'png' in data or b'tga' in data or b'exit' in data:
-            return 'txt'
     return 'dat'
 
 def init_rotor():
@@ -138,12 +131,15 @@ def _reverse_string(s):
 
 def unpack(args, statusBar=None):
     allfiles = []
-    if args.info == None:
-        args.info = 0
-    if args.path == None or os.path.isdir(args.path):
-        allfiles = [args.path + "/" +x for x in os.listdir(args.path) if x.endswith(".npk")]
-    else:
-        allfiles.append(args.path)
+    try:
+        if args.info == None:
+            args.info = 0
+        if args.path == None or os.path.isdir(args.path):
+            allfiles = [args.path + "/" +x for x in os.listdir(args.path) if x.endswith(".npk")]
+        else:
+            allfiles.append(args.path)
+    except TypeError as e:
+        print("NPK files not found")
     keys = Keys()
 
     for path in allfiles:
@@ -179,13 +175,13 @@ def unpack(args, statusBar=None):
             index_table = []
             nxfn_files = []
 
-            if encryption_mode == 256:
+            if encryption_mode == 256 and args.nxfn_file:
                 with open(folder_path+"/NXFN_result.txt", "w") as nxfn:
                     f.seek(index_offset + (files * 28) + 16)
                     nxfn_files = [x for x in (f.read()).split(b'\x00') if x != b'']
                     for nxfnline in nxfn_files:
                         nxfn.write(nxfnline.decode() + "\n")
-            elif encryption_mode == 256 and args.no_nxfn:
+            elif encryption_mode == 256:
                 f.seek(index_offset + (files * 28) + 16)
                 nxfn_files = [x for x in (f.read()).split(b'\x00') if x != b'']
 
@@ -294,15 +290,13 @@ def unpack(args, statusBar=None):
                     os.remove("done.tmp")
 
                 if zflag == 1 and ext != 'rot':
-                    with open("file.tmp", "wb") as wr:
-                        wr.write(data)
                     data = zlib.decompress(data)
                 elif zflag == 2 and ext != 'rot':
                     data = lz4.block.decompress(data, uncompressed_size=2147483647)
 
                 ext = get_ext(data)
 
-                if file_structure:
+                if file_structure and not args.no_nxfn:
                     print_data(args.info, "FILENAME:", file_structure, "FILE", file_offset)
                     file_path = folder_path + "/" + file_structure.decode().replace("\\", "/")
                 else:
@@ -330,11 +324,14 @@ def unpack(args, statusBar=None):
 
 def get_parser():
     parser = argparse.ArgumentParser(description='NPK/EXPK Extractor', add_help=False)
-    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit.')
+    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit')
     parser.add_argument('-p','--path', help="Specify the path of the file or directory, if not specified will do all the files in the current directory",type=str)
     parser.add_argument('-d', "--delete-compressed", action="store_true",help="Delete compressed files (such as ZStandard or ZIP files) after decompression")
     parser.add_argument('-i', '--info', help="Print information about the npk file(s) 1 to 5 for least to most verbose",type=int)
-    parser.add_argument('--no-nxfn', action="store_true",help="Disables from writing the NXFN file (if applicable)")
+    parser.add_argument('--nxfn-file', action="store_true",help="Writes a text file with the NXFN dump output (if applicable)")
+    parser.add_argument('--no-nxfn',action="store_false",help="Disables NXFN file structure")
+    parser.add_argument('--do-one', action='store_true', help='Only do the first file (TESTING PURPOSES)')
+
     opt = parser.parse_args()
     return opt
 

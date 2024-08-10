@@ -1,73 +1,43 @@
-# NeoX NPK Extractor
-
-![Screenshot](https://github.com/user-attachments/assets/0d742699-4269-497c-95bf-ab2c1c3b1460)
+# NeoX Tools
 
 # Setup
+
+Make sure that you have [poetry](https://python-poetry.org/) installed.
+
 ```
-pip install numpy transformations pymeshio tqdm pyqt5 moderngl pyrr zstandard lz4
-```
-### If you are in China:
-```
-pip install numpy transformations pymeshio tqdm pyqt5 zstandard lz4 moderngl pyrr -i https://pypi.tuna.tsinghua.edu.cn/simple
+poetry install
 ```
 
 # Instructions to extract
-## Basic examples
 
 No arguments will go through all the files and folders and find all NPK files
-```txt
-> python extractor.py
+```sh
+poetry run neox-tools extract ~/path/to/game --output-dir ~/my-output-dir
+```
+z
+With the '--help' argument, you can see at the help options
+```sh
+poetry run neox-tools extract --help
 ```
 
-With the '-h' argument, you can see at the help options
-```txt
-> python extractor.py -h
+With the '--delete-compressed' argument, if there are any ZIP or ZStandard files in the NPK, these will get deleted after extraction
+```sh
+poetry run neox-tools extract res.npk --delete-compressed
 ```
 
-With the '-p' argument, you can specify a file or a folder which to analyse
-```txt
-> python extractor.py -p script.npk
+With the '--no-nxfn' argument, you can disable the NXFN file structuring
+```sh
+poetry run neox-tools extract res.npk --no-nxfn
 ```
-
-With the '-d' argument, if there are any ZIP or ZStandard files in the NPK, these will get deleted after extraction
-```txt
-> python extractor.py -p script.npk -d
-```
-
-With the '-i' argument, you can see data on the NPK file being extracted (from 1 to 5 for verbosity)
-```txt
-> python extractor.py -p res.npk -i (1 to 5)
-```
-
-With the '--nxfn-file' argument, there will be a "NXFN_result.txt" file that has the NXFN file structuring from inside the NPK (if applicable)
-```txt
-> python extractor.py -p res2.npk --nxfn-file
-```
-
-With the '--no-nxfn' argument, you can disable the NXFN file structuring (useful if it's failing, you should not be using this unless there is a bug that stops you from extracting, which should be reported)
-```txt
-> python extractor.py -p res4.npk --no-nxfn
-``` 
-
-With the '--do-one' argument, the program will only do one file from inside the NPK (useful for testing purposes)
-```txt
-> python extractor.py -p script.npk --do-one
-```
-
-~~if you'll unpack Onmyoji game.~~
-~~you should use onmyoji_extractor.py rather than extractor.py~~
-
-I am trying to add compability to every type of NPK file, always try to use extractor.py and open issue in GitHub if something fails
-
 
 # Disclaimer:
-I am not the creator (please check the original fork), I will only be offering support to the extractor.py and keys.py script, I can fix issues with the mesh viewer / converter if possible but refer those issues to zhouhang95.
+This project is not originally developed by myself solely. I cloned a fork of a fork.
 
 # Credits
 
 Thank you to:
+* [MarcosVLI2](https://github.com/MarcosVLl2/neox_tools) - Forked repo
 * [zhouhang95](https://github.com/zhouhang95/neox_tools) - Original script
 * [hax0r313373](https://github.com/hax0r31337/denpk2) - Code for new RSA encryption
 * [xforce](https://github.com/xforce/neox-tools) - Research on NPK files and how they work
 * [yuanbi](https://github.com/yuanbi/NeteaseUnpackTools) - Rotor encryption and marshalling for PYC
-

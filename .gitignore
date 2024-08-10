@@ -1,3 +1,5 @@
 __pycache__
-.vscode
-res
+bin
+*.exe
+.idea
+*.swp

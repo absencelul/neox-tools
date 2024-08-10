@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "neox-tools"
+version = "0.1.0"
+description = ""
+authors = ["absence <absencelul@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "neox_tools", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+zstandard = "^0.23.0"
+lz4 = "^4.3.3"
+tqdm = "^4.66.5"
+click = "^8.1.7"
+
+[tool.poetry.scripts]
+neox-tools = "neox_tools.cli:main"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

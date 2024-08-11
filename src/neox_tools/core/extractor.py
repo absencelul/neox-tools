@@ -8,6 +8,7 @@ import zlib
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from enum import Enum, auto
+from io import BufferedRandom
 from pathlib import Path
 from typing import BinaryIO, List, Optional, Tuple, Union, Callable
 
@@ -76,6 +77,7 @@ class NPKExtractor:
                 nxfn_files = self._read_nxfn_files(
                     f, file_count, index_offset, encryption_mode
                 )
+
                 index_table = self._read_index_table(
                     f, file_count, index_offset, file_type, nxfn_files
                 )
@@ -83,11 +85,7 @@ class NPKExtractor:
                 self._extract_files_parallel(
                     f, index_table, file_type, progress_callback
                 )
-            except ValueError as e:
-                print(f"\nValue Error: Unpacking {self.path.stem}, {e}\n")
-                self.output_dir.rmdir()
-            except Exception as e:
-                print(f"\nError: Unpacking {self.path.stem}, {e}\n")
+            except Exception:
                 self.output_dir.rmdir()
 
     @staticmethod
@@ -128,32 +126,39 @@ class NPKExtractor:
         nxfn_files: List[bytes],
     ) -> List[FileInfo]:
         f.seek(index_offset)
+
         with tempfile.TemporaryFile() as tmp:
             data = f.read(file_count * 28)
+
             if file_type == FileType.EXPK:
                 data = self.keys.decrypt(data)
+
             tmp.write(data)
             tmp.seek(0)
 
             return [
-                self._read_file_info(tmp, nxfn_files[i] if nxfn_files else None)
+                file_info
                 for i in range(file_count)
+                if (file_info := self._read_file_info(tmp, nxfn_files[i] if nxfn_files else None)) is not None
             ]
 
     def _read_file_info(
-        self, tmp: BinaryIO, file_structure: Optional[bytes]
-    ) -> FileInfo:
-        return FileInfo(
-            sign=(self._read_uint32(tmp), tmp.tell()),
-            offset=self._read_uint32(tmp),
-            length=self._read_uint32(tmp),
-            original_length=self._read_uint32(tmp),
-            zcrc=self._read_uint32(tmp),
-            crc=self._read_uint32(tmp),
-            structure=file_structure,
-            compression_type=CompressionType(self._read_uint16(tmp)),
-            flag=self._read_uint16(tmp),
-        )
+        self, tmp: BufferedRandom, file_structure: Optional[bytes]
+    ) -> Optional[FileInfo]:
+        try:
+            return FileInfo(
+                sign=(self._read_uint32(tmp), tmp.tell()),
+                offset=self._read_uint32(tmp),
+                length=self._read_uint32(tmp),
+                original_length=self._read_uint32(tmp),
+                zcrc=self._read_uint32(tmp),
+                crc=self._read_uint32(tmp),
+                structure=file_structure,
+                compression_type=CompressionType(self._read_uint16(tmp)),
+                flag=self._read_uint16(tmp),
+            )
+        except ValueError:
+            return None
 
     def _extract_files_parallel(
         self,
@@ -165,7 +170,7 @@ class NPKExtractor:
         total_files = len(index_table)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
-            for i, file_info in enumerate(index_table):
+            for (i, file_info) in enumerate(index_table):
                 f.seek(file_info.offset)
                 data = f.read(file_info.length)
                 if file_type == FileType.EXPK:
@@ -279,11 +284,13 @@ class NPKExtractor:
     def _decompress_data(
         data: bytes, compression_type: CompressionType, original_length: int
     ) -> bytes:
-        if compression_type == CompressionType.ZLIB:
-            return zlib.decompress(data)
-        elif compression_type == CompressionType.LZ4:
-            return lz4.block.decompress(data, uncompressed_size=original_length)
-        return data
+        match compression_type:
+            case CompressionType.NONE:
+                return data
+            case CompressionType.ZLIB:
+                return zlib.decompress(data)
+            case CompressionType.LZ4:
+                return lz4.block.decompress(data, uncompressed_size=original_length)
 
     @staticmethod
     def _reverse_string(s: bytes) -> bytes:
@@ -324,6 +331,8 @@ def get_file_extension(data: bytes) -> str:
     extension_map = {
         b"CocosStudio-UI": "coc",
         bytes([0x28, 0xB5, 0x2F, 0xFD]): "zst",
+        bytes([0x50, 0x4B, 0x03, 0x04]): "zip",
+        bytes([0x50, 0x4B, 0x05, 0x06]): "zip",
         b"SKELETON": "skeleton",
         b"%": "tpl",
         b"{": "json",
@@ -331,24 +340,23 @@ def get_file_extension(data: bytes) -> str:
         b"PKM": "pkm",
         b"PVR": "pvr",
         b"DDS": "dds",
-        b"BM": "bmp",
-        b"from typing import ": "pyi",
-        b"KTX": "ktx",
-        b"PNG": "png",
+        b'BM': "bmp",
+        b'from typing import ': "pyi",
+        bytes([0x28, 0xB5]): "rot",
+        bytes([0x1D, 0x04]): "rot",
+        bytes([0x15, 0x23]): "rot",
+        bytes([0x34, 0x80, 0xC8, 0xBB]): "mesh",
+        bytes([0x14, 0x00, 0x00, 0x00]): "type1",
+        bytes([0x04, 0x00, 0x00, 0x00]): "type2",
+        bytes([0x00, 0x01, 0x00, 0x00]): "type3",
         b"VANT": "vant",
         b"MDMP": "mdmp",
         b"RGIS": "gis",
         b"NTRK": "ntrk",
         b"RIFF": "riff",
         b"BKHD": "bnk",
-        b"-----BEGIN PUBLIC KEY-----": "pem",
+        b"-----BEING PUBLIC KEY-----": "pem",
         b"<": "xml",
-        bytes([0x50, 0x4B, 0x03, 0x04]): "zip",
-        bytes([0x50, 0x4B, 0x05, 0x06]): "zip",
-        bytes([0x34, 0x80, 0xC8, 0xBB]): "mesh",
-        bytes([0x14, 0x00, 0x00, 0x00]): "type1",
-        bytes([0x04, 0x00, 0x00, 0x00]): "type2",
-        bytes([0x00, 0x01, 0x00, 0x00]): "type3",
         bytes([0xE3, 0x00, 0x00, 0x00]): "pyc",
         bytes([0x63, 0x00, 0x00, 0x00]): "pyc",
     }
@@ -362,38 +370,38 @@ def get_file_extension(data: bytes) -> str:
         bytes([0x0D, 0x00, 0x02]),
     ]:
         return "tga"
-    elif data[:2] in [bytes([0x28, 0xB5]), bytes([0x1D, 0x04]), bytes([0x15, 0x23])]:
-        return "rot"
+    elif data[1:4] == b'KTX':
+        return 'ktx'
+    elif data[1:4] == b'PNG':
+        return 'png'
     elif data[7:15] == bytes([0x4E, 0x58, 0x53, 0x33, 0x03, 0x00, 0x00, 0x01]):
-        return "nxs3"
-
-    if len(data) < 1000000:
-        lower_data = data.lower()
-        if b"package google.protobuf" in lower_data:
+        return 'nxs3'
+    elif len(data) < 1000000:
+        if b"package google.protobuf" in data:
             return "proto"
-        if b"#ifndef google_protobuf" in lower_data:
+        if b"#ifndef google_protobuf" in data:
             return "h"
-        if b"#include <google/protobuf" in lower_data:
+        if b"#include <google/protobuf" in data:
             return "cc"
         if any(
-            keyword in lower_data
+            keyword in data
             for keyword in [b"void", b"main(", b"include", b"float"]
         ):
             return "shader"
-        if b"technique" in lower_data or b"ifndef" in lower_data:
+        if b"technique" in data or b"ifndef" in data:
             return "shader"
-        if b"?xml" in lower_data:
+        if b"?xml" in data:
             return "xml"
-        if b"<script" in lower_data:
+        if b"<script" in data:
             return "html"
-        if b"javascript" in lower_data:
+        if b"javascript" in data:
             return "js"
         if any(
-            keyword in lower_data
+            keyword in data
             for keyword in [b"biped", b"bip001", b"bone", b"bone001", b"bip01"]
         ):
             return "model"
-        if b"div.document" in lower_data:
+        if b"div.document" in data:
             return "css"
 
     return "dat"
